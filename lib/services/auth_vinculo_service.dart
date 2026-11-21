@@ -7,7 +7,7 @@ import '../models/usuario_model.dart';
 import '../models/vinculo_familiar_model.dart';
 
 class AuthVinculoService {
-  static const String _baseUrl = 'http://localhost:8080/api/auth';
+  static const String _baseUrl = 'http://192.168.0.5:8080/api/auth';
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
