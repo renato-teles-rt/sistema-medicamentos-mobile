@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/usuario_model.dart';
-import '../services/auth_vinculo_service.dart';
+import '../services/session_service.dart';
 import 'login_view.dart';
 import 'painel_vinculo_view.dart';
 
@@ -31,8 +31,17 @@ class HomePacienteView extends StatefulWidget {
 }
 
 class _HomePacienteViewState extends State<HomePacienteView> {
-  final AuthVinculoService _authService = AuthVinculoService();
   final List<MedicamentoItem> _medicamentos = [];
+
+  Future<void> _fazerLogout() async {
+    await SessionService.encerrarSessao();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginView()),
+      (route) => false,
+    );
+  }
 
   void _abrirFormularioNovoRemedio() {
     final nomeController = TextEditingController();
@@ -220,15 +229,7 @@ class _HomePacienteViewState extends State<HomePacienteView> {
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Sair',
-            onPressed: () async {
-              await _authService.sairGoogle();
-              if (context.mounted) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginView()),
-                );
-              }
-            },
+            onPressed: _fazerLogout,
           ),
         ],
       ),

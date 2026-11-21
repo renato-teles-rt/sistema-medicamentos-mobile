@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../models/usuario_model.dart';
 import '../services/auth_vinculo_service.dart';
+import '../services/session_service.dart';
 import 'escolha_cuidador_view.dart';
 import 'home_paciente_view.dart';
 import 'login_view.dart';
@@ -25,6 +26,16 @@ class _PainelVinculoViewState extends State<PainelVinculoView> {
   void dispose() {
     _codigoController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fazerLogout() async {
+    await SessionService.encerrarSessao();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginView()),
+      (route) => false,
+    );
   }
 
   Future<void> _vincular() async {
@@ -87,15 +98,7 @@ class _PainelVinculoViewState extends State<PainelVinculoView> {
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Sair',
-            onPressed: () async {
-              await _authService.sairGoogle();
-              if (context.mounted) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginView()),
-                );
-              }
-            },
+            onPressed: _fazerLogout,
           ),
         ],
       ),

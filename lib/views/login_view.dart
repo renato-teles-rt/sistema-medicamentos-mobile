@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../models/usuario_model.dart';
 import '../services/auth_vinculo_service.dart';
-import 'painel_vinculo_view.dart';
+import '../services/session_service.dart';
 import 'escolha_cuidador_view.dart';
+import 'painel_vinculo_view.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -29,10 +30,13 @@ class _LoginViewState extends State<LoginView> {
           .entrarComContaGoogleNativa(_tipoPerfil);
 
       if (usuario != null && mounted) {
+        await SessionService.salvarSessao(usuario);
+
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => _tipoPerfil == 'PACIENTE'
+            builder: (_) => usuario.tipoPerfil == 'PACIENTE'
                 ? EscolhaCuidadorView(usuario: usuario)
                 : PainelVinculoView(usuario: usuario),
           ),

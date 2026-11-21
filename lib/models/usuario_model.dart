@@ -25,4 +25,15 @@ class UsuarioModel {
       codigoVinculo: json['codigoVinculo'],
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'nome': nome,
+      'email': email,
+      'fotoUrl': fotoUrl,
+      'tipoPerfil': tipoPerfil,
+      'codigoVinculo': codigoVinculo,
+    };
+  }
 }
