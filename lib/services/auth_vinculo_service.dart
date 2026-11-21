@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/usuario_model.dart';
 import '../models/vinculo_familiar_model.dart';
+import 'session_service.dart';
 
 class AuthVinculoService {
   static const String _baseUrl = 'http://192.168.0.5:8080/api/auth';
@@ -13,6 +14,20 @@ class AuthVinculoService {
     scopes: ['email', 'profile'],
     serverClientId: '889196260347-s3j3o28mi0atsb01tqdsj4v4m23hlcrj.apps.googleusercontent.com',
   );
+
+  String _extrairMensagemErro(http.Response response, String fallback) {
+    try {
+      if (response.bodyBytes.isNotEmpty) {
+        final dynamic decodificado = jsonDecode(utf8.decode(response.bodyBytes));
+        if (decodificado is Map<String, dynamic> && decodificado['erro'] != null) {
+          return decodificado['erro'].toString();
+        }
+      }
+    } catch (_) {
+      // Ignora falha de parse caso o corpo não seja JSON válido
+    }
+    return fallback;
+  }
 
   // Abre o seletor nativo com as contas Google já cadastradas no telefone
   Future<UsuarioModel?> entrarComContaGoogleNativa(String tipoPerfil) async {
@@ -32,7 +47,7 @@ class AuthVinculoService {
 
     final response = await http.post(
       Uri.parse('$_baseUrl/google-token'),
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
       body: jsonEncode({'idToken': idToken, 'tipoPerfil': tipoPerfil}),
     );
 
@@ -52,9 +67,12 @@ class AuthVinculoService {
     int cuidadorId,
     String codigoPaciente,
   ) async {
+    final Map<String, String> headers = await SessionService.headersAutenticados();
+    headers['X-Usuario-Id'] = cuidadorId.toString();
+
     final response = await http.post(
       Uri.parse('$_baseUrl/vincular'),
-      headers: {'Content-Type': 'application/json'},
+      headers: headers,
       body: jsonEncode({
         'cuidadorId': cuidadorId,
         'codigoVinculo': codigoPaciente.trim().toUpperCase(),
@@ -62,8 +80,9 @@ class AuthVinculoService {
     );
 
     if (response.statusCode != 200) {
-      final dados = jsonDecode(utf8.decode(response.bodyBytes));
-      throw Exception(dados['erro'] ?? 'Erro ao vincular perfil.');
+      throw Exception(
+        _extrairMensagemErro(response, 'Erro ao vincular perfil.'),
+      );
     }
   }
 
@@ -71,15 +90,25 @@ class AuthVinculoService {
   Future<List<VinculoFamiliarModel>> listarCuidadoresDoPaciente(
     int pacienteId,
   ) async {
+    final Map<String, String> headers = await SessionService.headersAutenticados(
+      incluirJson: false,
+    );
+
     final response = await http.get(
       Uri.parse('$_baseUrl/paciente/$pacienteId/cuidadores'),
+      headers: headers,
     );
 
     if (response.statusCode == 200) {
       final List<dynamic> lista = jsonDecode(utf8.decode(response.bodyBytes));
       return lista.map((item) => VinculoFamiliarModel.fromJson(item)).toList();
     } else {
-      throw Exception('Não foi possível carregar os cuidadores vinculados.');
+      throw Exception(
+        _extrairMensagemErro(
+          response,
+          'Não foi possível carregar os cuidadores vinculados.',
+        ),
+      );
     }
   }
 
@@ -87,27 +116,43 @@ class AuthVinculoService {
   Future<List<VinculoFamiliarModel>> listarPacientesDoCuidador(
     int cuidadorId,
   ) async {
+    final Map<String, String> headers = await SessionService.headersAutenticados(
+      incluirJson: false,
+    );
+
     final response = await http.get(
       Uri.parse('$_baseUrl/cuidador/$cuidadorId/pacientes'),
+      headers: headers,
     );
 
     if (response.statusCode == 200) {
       final List<dynamic> lista = jsonDecode(utf8.decode(response.bodyBytes));
       return lista.map((item) => VinculoFamiliarModel.fromJson(item)).toList();
     } else {
-      throw Exception('Não foi possível carregar os pacientes vinculados.');
+      throw Exception(
+        _extrairMensagemErro(
+          response,
+          'Não foi possível carregar os pacientes vinculados.',
+        ),
+      );
     }
   }
 
   // RN01: Desvincula um cuidador/paciente para liberar vaga
   Future<void> desvincularFamiliar(int vinculoId) async {
+    final Map<String, String> headers = await SessionService.headersAutenticados(
+      incluirJson: false,
+    );
+
     final response = await http.delete(
       Uri.parse('$_baseUrl/vincular/$vinculoId'),
+      headers: headers,
     );
 
     if (response.statusCode != 200) {
-      final dados = jsonDecode(utf8.decode(response.bodyBytes));
-      throw Exception(dados['erro'] ?? 'Erro ao encerrar vínculo.');
+      throw Exception(
+        _extrairMensagemErro(response, 'Erro ao encerrar vínculo.'),
+      );
     }
   }
 }

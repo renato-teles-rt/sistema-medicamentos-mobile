@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -8,14 +8,12 @@ import 'auth_vinculo_service.dart';
 class SessionService {
   static const String _chaveUsuario = 'cuidamed_usuario_sessao';
 
-  /// Salva a sessão do usuário localmente após o login (RN02)
   static Future<void> salvarSessao(UsuarioModel usuario) async {
     final prefs = await SharedPreferences.getInstance();
     final String usuarioJson = jsonEncode(usuario.toJson());
     await prefs.setString(_chaveUsuario, usuarioJson);
   }
 
-  /// Recupera o usuário logado ao abrir o aplicativo (RN02)
   static Future<UsuarioModel?> obterSessaoAtiva() async {
     final prefs = await SharedPreferences.getInstance();
     final String? usuarioJson = prefs.getString(_chaveUsuario);
@@ -33,7 +31,29 @@ class SessionService {
     }
   }
 
-  /// Encerra a sessão apenas mediante ação explícita de "Sair" (RN02)
+  static Future<int?> obterUsuarioIdAtivo() async {
+    final UsuarioModel? usuario = await obterSessaoAtiva();
+    return usuario?.id;
+  }
+
+  static Future<Map<String, String>> headersAutenticados({
+    bool incluirJson = true,
+  }) async {
+    final int? usuarioId = await obterUsuarioIdAtivo();
+    final headers = <String, String>{};
+
+    if (incluirJson) {
+      headers['Content-Type'] = 'application/json';
+      headers['Accept'] = 'application/json';
+    }
+
+    if (usuarioId != null) {
+      headers['X-Usuario-Id'] = usuarioId.toString();
+    }
+
+    return headers;
+  }
+
   static Future<void> encerrarSessao() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_chaveUsuario);
@@ -41,7 +61,7 @@ class SessionService {
     try {
       await AuthVinculoService().sairGoogle();
     } catch (_) {
-      // Garante que a sessão local seja limpa mesmo sem internet no momento
+      // Sessao local removida mesmo sem conexao
     }
   }
 }

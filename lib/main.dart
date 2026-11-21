@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'models/usuario_model.dart';
 import 'services/session_service.dart';
+import 'theme/app_theme.dart';
 import 'views/home_paciente_view.dart';
 import 'views/login_view.dart';
 import 'views/painel_vinculo_view.dart';
@@ -31,10 +32,19 @@ class CuidaMedApp extends StatelessWidget {
     return MaterialApp(
       title: 'CuidaMed 50+',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0F4C81)),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.lightTheme,
+      builder: (context, child) {
+        final mediaQuery = MediaQuery.of(context);
+        final currentScale = mediaQuery.textScaler.scale(1.0);
+        final clampedScale = currentScale.clamp(1.0, 1.35);
+
+        return MediaQuery(
+          data: mediaQuery.copyWith(
+            textScaler: TextScaler.linear(clampedScale),
+          ),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: telaInicial,
     );
   }
