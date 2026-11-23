@@ -9,23 +9,28 @@ import 'session_service.dart';
 
 class AuthVinculoService {
   static const String _baseUrl = 'http://192.168.0.5:8080/api/auth';
+  static const String _calendarScope =
+      'https://www.googleapis.com/auth/calendar.events';
 
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email', 'profile'],
-    serverClientId: '889196260347-s3j3o28mi0atsb01tqdsj4v4m23hlcrj.apps.googleusercontent.com',
+  // Guarda o accessToken OAuth para o AgendamentoDoseService enviar em X-Google-Token
+  static String? googleCalendarAccessToken;
+
+  static final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email', 'profile', _calendarScope],
+    serverClientId:
+        '889196260347-s3j3o28mi0atsb01tqdsj4v4m23hlcrj.apps.googleusercontent.com',
   );
 
   String _extrairMensagemErro(http.Response response, String fallback) {
     try {
       if (response.bodyBytes.isNotEmpty) {
         final dynamic decodificado = jsonDecode(utf8.decode(response.bodyBytes));
-        if (decodificado is Map<String, dynamic> && decodificado['erro'] != null) {
+        if (decodificado is Map<String, dynamic> &&
+            decodificado['erro'] != null) {
           return decodificado['erro'].toString();
         }
       }
-    } catch (_) {
-      // Ignora falha de parse caso o corpo não seja JSON válido
-    }
+    } catch (_) {}
     return fallback;
   }
 
@@ -38,6 +43,7 @@ class AuthVinculoService {
 
     final GoogleSignInAuthentication auth = await contaGoogle.authentication;
     final String? idToken = auth.idToken;
+    googleCalendarAccessToken = auth.accessToken;
 
     if (idToken == null) {
       throw Exception(
@@ -51,15 +57,53 @@ class AuthVinculoService {
       body: jsonEncode({'idToken': idToken, 'tipoPerfil': tipoPerfil}),
     );
 
-    final dados = jsonDecode(utf8.decode(response.bodyBytes));
-    if (response.statusCode == 200) {
+    final String corpoTexto = utf8.decode(response.bodyBytes);
+    dynamic dados;
+    if (corpoTexto.isNotEmpty) {
+      try {
+        dados = jsonDecode(corpoTexto);
+      } catch (_) {
+        dados = null;
+      }
+    }
+
+    if (response.statusCode == 200 && dados is Map<String, dynamic>) {
       return UsuarioModel.fromJson(dados);
     } else {
-      throw Exception(dados['erro'] ?? 'Falha ao autenticar no servidor.');
+      final dynamic detalhe = dados is Map
+          ? (dados['erro'] ?? dados['message'] ?? corpoTexto)
+          : (corpoTexto.isNotEmpty ? corpoTexto : 'sem corpo na resposta');
+      throw Exception('HTTP ${response.statusCode}: $detalhe');
+    }
+  }
+
+  // Garante um accessToken atualizado com permissão da Google Agenda antes de salvar remédios
+  static Future<String?> obterTokenGoogleAgenda() async {
+    try {
+      GoogleSignInAccount? conta =
+          _googleSignIn.currentUser ?? await _googleSignIn.signInSilently();
+      if (conta == null) {
+        return googleCalendarAccessToken;
+      }
+
+      final bool autorizado =
+          await _googleSignIn.requestScopes([_calendarScope]);
+      if (!autorizado) {
+        return googleCalendarAccessToken;
+      }
+
+      final GoogleSignInAuthentication auth = await conta.authentication;
+      if (auth.accessToken != null && auth.accessToken!.isNotEmpty) {
+        googleCalendarAccessToken = auth.accessToken;
+      }
+      return googleCalendarAccessToken;
+    } catch (_) {
+      return googleCalendarAccessToken;
     }
   }
 
   Future<void> sairGoogle() async {
+    googleCalendarAccessToken = null;
     await _googleSignIn.signOut();
   }
 
@@ -67,7 +111,8 @@ class AuthVinculoService {
     int cuidadorId,
     String codigoPaciente,
   ) async {
-    final Map<String, String> headers = await SessionService.headersAutenticados();
+    final Map<String, String> headers =
+        await SessionService.headersAutenticados();
     headers['X-Usuario-Id'] = cuidadorId.toString();
 
     final response = await http.post(
@@ -90,9 +135,8 @@ class AuthVinculoService {
   Future<List<VinculoFamiliarModel>> listarCuidadoresDoPaciente(
     int pacienteId,
   ) async {
-    final Map<String, String> headers = await SessionService.headersAutenticados(
-      incluirJson: false,
-    );
+    final Map<String, String> headers =
+        await SessionService.headersAutenticados(incluirJson: false);
 
     final response = await http.get(
       Uri.parse('$_baseUrl/paciente/$pacienteId/cuidadores'),
@@ -116,9 +160,8 @@ class AuthVinculoService {
   Future<List<VinculoFamiliarModel>> listarPacientesDoCuidador(
     int cuidadorId,
   ) async {
-    final Map<String, String> headers = await SessionService.headersAutenticados(
-      incluirJson: false,
-    );
+    final Map<String, String> headers =
+        await SessionService.headersAutenticados(incluirJson: false);
 
     final response = await http.get(
       Uri.parse('$_baseUrl/cuidador/$cuidadorId/pacientes'),
@@ -140,9 +183,8 @@ class AuthVinculoService {
 
   // RN01: Desvincula um cuidador/paciente para liberar vaga
   Future<void> desvincularFamiliar(int vinculoId) async {
-    final Map<String, String> headers = await SessionService.headersAutenticados(
-      incluirJson: false,
-    );
+    final Map<String, String> headers =
+        await SessionService.headersAutenticados(incluirJson: false);
 
     final response = await http.delete(
       Uri.parse('$_baseUrl/vincular/$vinculoId'),

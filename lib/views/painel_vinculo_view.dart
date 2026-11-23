@@ -5,6 +5,7 @@ import '../models/usuario_model.dart';
 import '../models/vinculo_familiar_model.dart';
 import '../services/auth_vinculo_service.dart';
 import '../services/session_service.dart';
+import 'cuidador_home_view.dart';
 import 'escolha_cuidador_view.dart';
 import 'home_paciente_view.dart';
 import 'login_view.dart';
@@ -85,12 +86,20 @@ class _PainelVinculoViewState extends State<PainelVinculoView> {
       );
       _codigoController.clear();
       await _carregarVinculos();
-      if (mounted) {
-        setState(() {
-          _sucesso = true;
-          _mensagem = 'Paciente vinculado com sucesso!';
-        });
-      }
+      if (!mounted) return;
+
+      final VinculoFamiliarModel? vinculoRecente =
+          _vinculos.isNotEmpty ? _vinculos.first : null;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CuidadorHomeView(
+            usuario: widget.usuario,
+            vinculoInicial: vinculoRecente,
+          ),
+        ),
+      );
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -450,55 +459,73 @@ class _PainelVinculoViewState extends State<PainelVinculoView> {
         final pessoa = isPaciente ? vinculo.cuidador : vinculo.paciente;
         return Container(
           margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: Colors.grey.shade300, width: 1.5),
           ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: const Color(0xFFE3F0FA),
-                child: Icon(
-                  isPaciente ? Icons.volunteer_activism : Icons.person,
-                  color: const Color(0xFF0F4C81),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      pessoa.nome,
-                      style: const TextStyle(
-                        fontSize: 17,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: isPaciente
+                ? null
+                : () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CuidadorHomeView(
+                          usuario: widget.usuario,
+                          vinculoInicial: vinculo,
+                        ),
+                      ),
+                    );
+                  },
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: const Color(0xFFE3F0FA),
+                    child: Icon(
+                      isPaciente ? Icons.volunteer_activism : Icons.person,
+                      color: const Color(0xFF0F4C81),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          pessoa.nome,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          pessoa.email,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => _confirmarDesvinculacao(vinculo),
+                    icon: Icon(Icons.link_off, color: Colors.red.shade700),
+                    label: Text(
+                      'Desvincular',
+                      style: TextStyle(
+                        color: Colors.red.shade700,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
-                      pessoa.email,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.black54,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              TextButton.icon(
-                onPressed: () => _confirmarDesvinculacao(vinculo),
-                icon: Icon(Icons.link_off, color: Colors.red.shade700),
-                label: Text(
-                  'Desvincular',
-                  style: TextStyle(
-                    color: Colors.red.shade700,
-                    fontWeight: FontWeight.bold,
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       }).toList(),
