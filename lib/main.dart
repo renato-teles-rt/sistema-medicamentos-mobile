@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'models/usuario_model.dart';
@@ -20,13 +22,13 @@ class CuidaMedApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget telaInicial;
+    Widget telaDestino;
     if (usuarioInicial == null) {
-      telaInicial = const LoginView();
+      telaDestino = const LoginView();
     } else if (usuarioInicial!.tipoPerfil == 'PACIENTE') {
-      telaInicial = HomePacienteView(usuario: usuarioInicial!);
+      telaDestino = HomePacienteView(usuario: usuarioInicial!);
     } else {
-      telaInicial = PainelVinculoView(usuario: usuarioInicial!);
+      telaDestino = PainelVinculoView(usuario: usuarioInicial!);
     }
 
     return MaterialApp(
@@ -45,7 +47,52 @@ class CuidaMedApp extends StatelessWidget {
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: telaInicial,
+      home: SplashLogoView(proximaTela: telaDestino),
+    );
+  }
+}
+
+class SplashLogoView extends StatefulWidget {
+  final Widget proximaTela;
+  final Duration duracao;
+
+  const SplashLogoView({
+    super.key,
+    required this.proximaTela,
+    this.duracao = const Duration(seconds: 2),
+  });
+
+  @override
+  State<SplashLogoView> createState() => _SplashLogoViewState();
+}
+
+class _SplashLogoViewState extends State<SplashLogoView> {
+  @override
+  void initState() {
+    super.initState();
+    Timer(widget.duracao, () {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => widget.proximaTela),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF021330),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Image.asset(
+            'assets/images/logo_cuidamed.png',
+            width: 240,
+            fit: BoxFit.contain,
+            semanticLabel: 'CuidaMed 50+',
+          ),
+        ),
+      ),
     );
   }
 }

@@ -15,6 +15,11 @@ class LoginView extends StatefulWidget {
 }
 
 class _LoginViewState extends State<LoginView> {
+  static const Color _corFundoNavy = Color(0xFF021330);
+  static const Color _corCardNavy = Color(0xFF081D45);
+  static const Color _corDestaqueCiano = Color(0xFF38BDF8);
+  static const Color _corBotaoAzul = Color(0xFF0284C7);
+
   final AuthVinculoService _authService = AuthVinculoService();
   String _tipoPerfil = 'PACIENTE';
   bool _carregando = false;
@@ -57,7 +62,7 @@ class _LoginViewState extends State<LoginView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FA),
+      backgroundColor: _corFundoNavy,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -80,26 +85,32 @@ class _LoginViewState extends State<LoginView> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Icon(
-                      Icons.medication_rounded,
-                      size: 72,
-                      color: Color(0xFF0F4C81),
+                    Center(
+                      child: Image.asset(
+                        'assets/images/logo_cuidamed.png',
+                        height: 130,
+                        fit: BoxFit.contain,
+                        semanticLabel: 'CuidaMed 50+',
+                      ),
                     ),
                     const SizedBox(height: 16),
                     const Text(
                       'CuidaMed 50+',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 30,
+                        fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F4C81),
+                        color: Colors.white,
                       ),
                     ),
                     const SizedBox(height: 8),
                     const Text(
                       'Escolha como você vai usar o aplicativo:',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 18, color: Colors.black87),
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Color(0xFFCBD5E1),
+                      ),
                     ),
                     const SizedBox(height: 24),
                     Row(
@@ -127,7 +138,7 @@ class _LoginViewState extends State<LoginView> {
                         padding: const EdgeInsets.all(14),
                         margin: const EdgeInsets.only(bottom: 16),
                         decoration: BoxDecoration(
-                          color: Colors.red.shade50,
+                          color: Colors.red.shade900.withValues(alpha: 0.45),
                           border: Border.all(
                             color: AppTheme.danger,
                             width: 1.5,
@@ -137,7 +148,7 @@ class _LoginViewState extends State<LoginView> {
                         child: Text(
                           _erro!,
                           style: const TextStyle(
-                            color: AppTheme.danger,
+                            color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -156,7 +167,7 @@ class _LoginViewState extends State<LoginView> {
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0F4C81),
+                        backgroundColor: _corBotaoAzul,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 18),
                         shape: RoundedRectangleBorder(
@@ -184,16 +195,24 @@ class _LoginViewState extends State<LoginView> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
           decoration: BoxDecoration(
-            color: selecionado ? const Color(0xFFE3F0FA) : Colors.white,
+            color: selecionado
+                ? _corDestaqueCiano.withValues(alpha: 0.16)
+                : _corCardNavy,
             border: Border.all(
-              color: selecionado ? const Color(0xFF0F4C81) : AppTheme.border,
+              color: selecionado
+                  ? _corDestaqueCiano
+                  : const Color(0xFF1E3A8A),
               width: selecionado ? 2.5 : 1.5,
             ),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Column(
             children: [
-              Icon(icone, size: 32, color: const Color(0xFF0F4C81)),
+              Icon(
+                icone,
+                size: 32,
+                color: selecionado ? _corDestaqueCiano : Colors.white,
+              ),
               const SizedBox(height: 8),
               Text(
                 titulo,
@@ -201,7 +220,7 @@ class _LoginViewState extends State<LoginView> {
                 style: const TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.onSurface,
+                  color: Colors.white,
                 ),
               ),
             ],
