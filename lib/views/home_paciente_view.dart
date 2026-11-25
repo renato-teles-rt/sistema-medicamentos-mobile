@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../models/usuario_model.dart';
 import '../services/agendamento_dose_service.dart';
+import '../services/alarme_notificacao_service.dart';
 import '../services/session_service.dart';
 import 'agendamentos_doses_view.dart';
 import 'login_view.dart';
@@ -217,6 +218,15 @@ class _HomePacienteViewState extends State<HomePacienteView> {
       _historicoTomados = tomados;
       _carregando = false;
     });
+
+    for (final item in ativos) {
+      await AlarmeNotificacaoService.agendarAlarmeRemedio(
+        chaveUnica: item.chaveUnica,
+        nomeMedicamento: item.nomeMedicamento,
+        dosagem: item.comprimidos,
+        horarioHhMm: item.horario,
+      );
+    }
   }
 
   Future<void> _marcarTomado(ItemDoseHome item, int index) async {
@@ -229,6 +239,7 @@ class _HomePacienteViewState extends State<HomePacienteView> {
 
     if (!mounted) return;
     _ajustesRecentes[chave] = (status: 'TOMADO', horario: item.horario);
+    await AlarmeNotificacaoService.cancelarAlarmeRemedio(chave);
 
     setState(() {
       item.status = 'TOMADO';
@@ -261,6 +272,14 @@ class _HomePacienteViewState extends State<HomePacienteView> {
             item.status = 'ADIADO';
             _itensAtivosHome.sort((a, b) => a.horario.compareTo(b.horario));
           });
+
+          AlarmeNotificacaoService.cancelarAlarmeRemedio(chave);
+          AlarmeNotificacaoService.agendarAlarmeRemedio(
+            chaveUnica: item.chaveUnica,
+            nomeMedicamento: item.nomeMedicamento,
+            dosagem: item.comprimidos,
+            horarioHhMm: novoHorario,
+          );
 
           Navigator.pop(sheetCtx);
           if (!mounted) return;
@@ -396,6 +415,7 @@ class _HomePacienteViewState extends State<HomePacienteView> {
 
   Future<void> _fazerLogout() async {
     _ajustesRecentes.clear();
+    await AlarmeNotificacaoService.cancelarTodos();
     await SessionService.encerrarSessao();
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(

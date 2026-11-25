@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'models/usuario_model.dart';
 import 'services/session_service.dart';
+import 'services/alarme_notificacao_service.dart';
 import 'theme/app_theme.dart';
 import 'views/home_paciente_view.dart';
 import 'views/login_view.dart';
@@ -11,6 +12,7 @@ import 'views/painel_vinculo_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AlarmeNotificacaoService.inicializar();
   final UsuarioModel? usuarioSalvo = await SessionService.obterSessaoAtiva();
   runApp(CuidaMedApp(usuarioInicial: usuarioSalvo));
 }
