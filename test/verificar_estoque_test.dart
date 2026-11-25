@@ -60,6 +60,37 @@ void main() {
       'alerta padrao',
     );
 
+    // Regressao: estoque nunca fica negativo. Uma dose maior que o estoque
+    // restante zera o contador e reporta 0 dias, nao um numero negativo.
+    final dosesSobrando = normal.copyWith(quantidadeTotal: 1);
+    expectTrue(
+      normal
+              .copyWith(
+                quantidadeTotal:
+                    dosesSobrando.quantidadeTotal - dosesSobrando.quantidadePorDose,
+              )
+              .quantidadeTotal ==
+          0,
+      'ultima dose zera o estoque em vez de ficar negativa',
+    );
+    final estourado = MedicamentoModel(
+      id: '3',
+      nome: 'Gliclazida',
+      dosagem: '30mg',
+      horario: '07:00',
+      quantidadePorDose: 3,
+      quantidadeTotal: 1,
+    );
+    expectTrue(estourado.diasRestantes == 0, 'estoque menor que a dose = 0 dias');
+    expectTrue(
+      estourado.statusEstoque == StatusEstoque.baixo,
+      'estoque menor que a dose ainda nao esgotou',
+    );
+    expectTrue(
+      normal.copyWith(quantidadeTotal: -5).quantidadeTotal == 0,
+      'copyWith nunca aceita estoque negativo',
+    );
+
     print('\nTodos os cenarios do teste passaram.');
   });
 }

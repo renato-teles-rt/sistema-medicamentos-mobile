@@ -1,18 +1,27 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 
+import '../config/api_config.dart';
 import '../models/usuario_model.dart';
 import '../models/vinculo_familiar_model.dart';
 import 'session_service.dart';
 
 class AuthVinculoService {
-  static const String _baseUrl = 'http://192.168.0.5:8080/api/auth';
+  static const String _googleClientId =
+      String.fromEnvironment(
+        'GOOGLE_CLIENT_ID',
+        defaultValue:
+            '889196260347-s3j3o28mi0atsb01tqdsj4v4m23hlcrj.apps.googleusercontent.com',
+      );
 
+  // Na web o client ID vem do <meta name="google-signin-client_id"> em
+  // web/index.html; o plugin web rejeita a propriedade serverClientId.
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-    serverClientId: '889196260347-s3j3o28mi0atsb01tqdsj4v4m23hlcrj.apps.googleusercontent.com',
+    serverClientId: kIsWeb ? null : _googleClientId,
   );
 
   String _extrairMensagemErro(http.Response response, String fallback) {
@@ -46,16 +55,34 @@ class AuthVinculoService {
     }
 
     final response = await http.post(
-      Uri.parse('$_baseUrl/google-token'),
+      ApiConfig.auth('/google-token'),
       headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
       body: jsonEncode({'idToken': idToken, 'tipoPerfil': tipoPerfil}),
     );
 
-    final dados = jsonDecode(utf8.decode(response.bodyBytes));
     if (response.statusCode == 200) {
-      return UsuarioModel.fromJson(dados);
-    } else {
-      throw Exception(dados['erro'] ?? 'Falha ao autenticar no servidor.');
+      // Resposta pode vir vazia ou sem JSON (proxy, página de erro): nesse
+      // caso mostramos mensagem amigável em vez de estourar FormatException.
+      final dynamic dados = _corpoJson(response);
+      if (dados is Map<String, dynamic>) {
+        return UsuarioModel.fromJson(dados);
+      }
+      throw Exception('Resposta inesperada do servidor de autenticação.');
+    }
+
+    final dynamic erro = _corpoJson(response);
+    final Object? mensagem = erro is Map<String, dynamic> ? erro['erro'] : null;
+    throw Exception(mensagem ?? 'Falha ao autenticar no servidor.');
+  }
+
+  /// Decodifica o corpo como JSON sem lançar exceção quando o conteúdo não é
+  /// JSON válido (ex.: HTML de erro de proxy). Retorna `null` nesses casos.
+  dynamic _corpoJson(http.Response response) {
+    if (response.bodyBytes.isEmpty) return null;
+    try {
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } catch (_) {
+      return null;
     }
   }
 
@@ -71,7 +98,7 @@ class AuthVinculoService {
     headers['X-Usuario-Id'] = cuidadorId.toString();
 
     final response = await http.post(
-      Uri.parse('$_baseUrl/vincular'),
+      ApiConfig.auth('/vincular'),
       headers: headers,
       body: jsonEncode({
         'cuidadorId': cuidadorId,
@@ -95,7 +122,7 @@ class AuthVinculoService {
     );
 
     final response = await http.get(
-      Uri.parse('$_baseUrl/paciente/$pacienteId/cuidadores'),
+      ApiConfig.auth('/paciente/$pacienteId/cuidadores'),
       headers: headers,
     );
 
@@ -121,7 +148,7 @@ class AuthVinculoService {
     );
 
     final response = await http.get(
-      Uri.parse('$_baseUrl/cuidador/$cuidadorId/pacientes'),
+      ApiConfig.auth('/cuidador/$cuidadorId/pacientes'),
       headers: headers,
     );
 
@@ -145,7 +172,7 @@ class AuthVinculoService {
     );
 
     final response = await http.delete(
-      Uri.parse('$_baseUrl/vincular/$vinculoId'),
+      ApiConfig.auth('/vincular/$vinculoId'),
       headers: headers,
     );
 

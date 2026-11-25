@@ -46,3 +46,16 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Backend (Spring Boot) — nunca comitar banco de dados ou artefatos de build
+backend/data/
+backend/target/
+
+# Logs locais de servidores de desenvolvimento
+.web_server.log
+.web_server.log.err
+.backend.log
+
+# Segredos locais
+.env
+.env.*

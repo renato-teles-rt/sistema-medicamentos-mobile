@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/api_config.dart';
 import '../models/medicamento_model.dart';
 import 'session_service.dart';
 
@@ -15,22 +16,29 @@ import 'session_service.dart';
 class MedicamentoService {
   static const String _prefixoChave = 'cuidamed_medicamentos_';
 
-  /// mesma base usada em AuthVinculoService, para futura sincronização
-  static const String _baseUrl = 'http://192.168.0.5:8080/api/medicamentos';
-
   String _chave(int pacienteId) => '$_prefixoChave$pacienteId';
 
   Future<List<MedicamentoModel>> listar(int pacienteId) async {
     final prefs = await SharedPreferences.getInstance();
-    final String? json = prefs.getString(_chave(pacienteId));
+
+    // Na web, uma chave com tipo inesperado (Map/List gravado por engano) faz
+    // `getString` lançar TypeError antes de qualquer try/catch de parse.
+    final String? json;
+    try {
+      json = prefs.getString(_chave(pacienteId));
+    } catch (_) {
+      await prefs.remove(_chave(pacienteId));
+      return [];
+    }
+
     if (json == null || json.isEmpty) return [];
 
     try {
-      final List<dynamic> lista = jsonDecode(json);
-      return lista
-          .map(
-            (item) => MedicamentoModel.fromJson(item as Map<String, dynamic>),
-          )
+      final dynamic decodificado = jsonDecode(json);
+      if (decodificado is! List) return [];
+      return decodificado
+          .whereType<Map<String, dynamic>>()
+          .map((item) => MedicamentoModel.fromJson(item))
           .toList();
     } catch (_) {
       // Dados corrompidos: começa um catálogo vazio em vez de travar a tela.
@@ -78,7 +86,7 @@ class MedicamentoService {
         incluirJson: false,
       );
       final response = await http.get(
-        Uri.parse('$_baseUrl/paciente/$pacienteId'),
+        ApiConfig.medicamentos('/paciente/$pacienteId'),
         headers: headers,
       );
 

@@ -34,8 +34,11 @@ class MedicamentoModel {
   int get consumoDiario => quantidadePorDose;
 
   /// Dias completos de tratamento até o estoque acabar.
-  int get diasRestantes =>
-      consumoDiario <= 0 ? 0 : quantidadeTotal ~/ consumoDiario;
+  ///
+  /// Nunca fica negativo: estoque zerado ou negativo vale 0 dias.
+  int get diasRestantes => (consumoDiario <= 0 || quantidadeTotal <= 0)
+      ? 0
+      : quantidadeTotal ~/ consumoDiario;
 
   StatusEstoque get statusEstoque {
     if (quantidadeTotal <= 0) return StatusEstoque.esgotado;
@@ -66,14 +69,16 @@ class MedicamentoModel {
     }
   }
 
+  /// Cópia com o estoque substituído, nunca abaixo de zero.
   MedicamentoModel copyWith({int? quantidadeTotal}) {
+    final int novoTotal = quantidadeTotal ?? this.quantidadeTotal;
     return MedicamentoModel(
       id: id,
       nome: nome,
       dosagem: dosagem,
       horario: horario,
       quantidadePorDose: quantidadePorDose,
-      quantidadeTotal: quantidadeTotal ?? this.quantidadeTotal,
+      quantidadeTotal: novoTotal < 0 ? 0 : novoTotal,
       diasAlerta: diasAlerta,
       observacao: observacao,
     );

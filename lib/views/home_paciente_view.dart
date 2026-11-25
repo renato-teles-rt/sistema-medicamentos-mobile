@@ -26,6 +26,7 @@ class _HomePacienteViewState extends State<HomePacienteView> {
   List<MedicamentoModel> _medicamentos = [];
   bool _carregando = true;
   String _filtro = '';
+  bool _sincronizando = false;
 
   @override
   void initState() {
@@ -46,7 +47,36 @@ class _HomePacienteViewState extends State<HomePacienteView> {
       _medicamentos = lista;
       _carregando = false;
     });
+    // Tenta buscar a versão do backend em segundo plano. Sem rede (ou sem o
+    // endpoint publicado) o catálogo local continua valendo — nada quebra.
+    _sincronizarEmSegundoPlano();
   }
+
+  Future<void> _sincronizarEmSegundoPlano() async {
+    if (_sincronizando) return;
+    _sincronizando = true;
+    try {
+      final remotos = await _medicamentoService.sincronizar(widget.usuario.id);
+      if (!mounted) return;
+      // Proteção contra perda de dados: se o backend responder vazio enquanto
+      // o paciente tem itens salvos localmente (ex.: endpoint recém-publicado
+      // ou usuário criado só no aparelho), mantemos o catálogo local.
+      if (remotos.isEmpty && _medicamentos.isNotEmpty) return;
+      // Só re-renderiza quando a sincronização trouxe algo diferente do que já
+      // está na tela, para não piscar a lista nem perder o foco da busca.
+      if (_assinatura(remotos) != _assinatura(_medicamentos)) {
+        setState(() => _medicamentos = remotos);
+      }
+    } finally {
+      _sincronizando = false;
+    }
+  }
+
+  /// Identifica o conteúdo do catálogo (nome + estoque + horário) para
+  /// comparar o resultado do backend com o que já está renderezado.
+  String _assinatura(List<MedicamentoModel> itens) => itens
+      .map((m) => '${m.id}|${m.nome}|${m.dosagem}|${m.horario}|${m.quantidadeTotal}')
+      .join(';');
 
   Future<void> _fazerLogout() async {
     await SessionService.encerrarSessao();
@@ -576,7 +606,7 @@ class _HomePacienteViewState extends State<HomePacienteView> {
   }
 
   Widget _construirContadorEstoque(MedicamentoModel item) {
-    // Usamos um passo de 5 unidades: nunca reduzimos abaixo de zero.
+    // O contador trabalha com unidades: reduz por dose e nunca abaixo de zero.
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey.shade400, width: 1.5),
@@ -588,20 +618,23 @@ class _HomePacienteViewState extends State<HomePacienteView> {
           IconButton(
             icon: const Icon(Icons.remove_circle_outline),
             color: item.quantidadeTotal > 0 ? _corPrimaria : Colors.grey,
-            tooltip: 'Registrar dose tomada (-1)',
-            onPressed: item.quantidadeTotal == 0
+            tooltip:
+                'Registrar dose tomada (-${item.quantidadePorDose} unidade(s))',
+            onPressed: item.quantidadeTotal <= 0
                 ? null
                 : () async {
+                    // O estoque nunca fica negativo: a última dose consome o
+                    // que restar (ex.: 1 unidade em estoque com 3 por dose).
+                    final restante = item.quantidadeTotal - item.quantidadePorDose;
                     await _medicamentoService.atualizar(
                       widget.usuario.id,
                       item.copyWith(
-                        quantidadeTotal:
-                            item.quantidadeTotal - item.quantidadePorDose,
+                        quantidadeTotal: restante < 0 ? 0 : restante,
                       ),
                     );
                     await _carregarCatalogo();
                     if (mounted &&
-                        item.quantidadeTotal == item.quantidadePorDose) {
+                        item.quantidadeTotal <= item.quantidadePorDose) {
                       _mostrarMensagem(
                         '${item.nome} zerou o estoque. Reponha as unidades.',
                       );

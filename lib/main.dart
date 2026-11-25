@@ -9,7 +9,19 @@ import 'views/painel_vinculo_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final UsuarioModel? usuarioSalvo = await SessionService.obterSessaoAtiva();
+
+  // A restauração da sessão NÃO pode derrubar o app. Um dado corrompido em
+  // SharedPreferences (ou uma plataforma que falhe ao inicializar o storage)
+  // levantava antes do runApp e deixava a tela branca, sem nenhuma pista.
+  // Agora qualquer falha cai na tela de login.
+  UsuarioModel? usuarioSalvo;
+  try {
+    usuarioSalvo = await SessionService.obterSessaoAtiva();
+  } catch (erro, pilha) {
+    debugPrint('Falha ao restaurar a sessão: $erro\n$pilha');
+    usuarioSalvo = null;
+  }
+
   runApp(CuidaMedApp(usuarioInicial: usuarioSalvo));
 }
 

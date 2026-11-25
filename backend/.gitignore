@@ -1,0 +1,5 @@
+# Banco de dados H2 do backend (desenvolvimento).
+# Nunca comitar dados reais de pacientes.
+data/
+target/
+*.log

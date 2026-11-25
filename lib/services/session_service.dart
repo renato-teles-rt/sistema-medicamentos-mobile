@@ -16,17 +16,47 @@ class SessionService {
 
   static Future<UsuarioModel?> obterSessaoAtiva() async {
     final prefs = await SharedPreferences.getInstance();
-    final String? usuarioJson = prefs.getString(_chaveUsuario);
+
+    // `prefs.getString` lança TypeError quando a chave guarda outro tipo (ex.:
+    // um Map gravado por engano). Na web isso acontece antes de qualquer
+    // try/catch de parse e derrubava o bootstrap com tela branca.
+    final String? usuarioJson = _lerString(prefs, _chaveUsuario);
 
     if (usuarioJson == null || usuarioJson.isEmpty) {
       return null;
     }
 
     try {
-      final Map<String, dynamic> mapa = jsonDecode(usuarioJson);
-      return UsuarioModel.fromJson(mapa);
+      final dynamic decodificado = jsonDecode(usuarioJson);
+      if (decodificado is! Map<String, dynamic>) {
+        await prefs.remove(_chaveUsuario);
+        return null;
+      }
+      final UsuarioModel usuario = UsuarioModel.fromJson(decodificado);
+      // fromJson aceita campos ausentes como `null`; uma sessão sem id não
+      // serve para autenticar nada, então é descartada.
+      if (usuario.id <= 0 || usuario.email.isEmpty) {
+        await prefs.remove(_chaveUsuario);
+        return null;
+      }
+      return usuario;
     } catch (_) {
       await prefs.remove(_chaveUsuario);
+      return null;
+    }
+  }
+
+  /// Lê uma string do SharedPreferences sem lançar quando o tipo armazenado
+  /// não é compatível. Devolve `null` e limpa a chave corrompida.
+  static String? _lerString(SharedPreferences prefs, String chave) {
+    try {
+      final dynamic valor = prefs.get(chave);
+      if (valor == null) return null;
+      if (valor is String) return valor;
+      // Tipo inesperado (Map/List/int): descarta para o app voltar ao login.
+      prefs.remove(chave);
+      return null;
+    } catch (_) {
       return null;
     }
   }

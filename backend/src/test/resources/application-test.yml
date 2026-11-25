@@ -1,0 +1,26 @@
+# Configuracao exclusiva dos testes.
+# Sem isso, os testes rodavam contra o banco de ARQUIVO de desenvolvimento
+# (./data/cuidamed) e deixavam dados de teste no ambiente local — alem de
+# tornar as assercoes dependentes da ordem de execucao.
+spring:
+  datasource:
+    url: jdbc:h2:mem:cuidamed-test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+
+cuidamed:
+  google:
+    # Vazio = modo DEV, para os testes nao precisarem de rede nem de conta Google.
+    client-id: ""
+  vinculo:
+    max-cuidadores-por-paciente: 2
+
+logging:
+  level:
+    br.com.cuidamed: WARN

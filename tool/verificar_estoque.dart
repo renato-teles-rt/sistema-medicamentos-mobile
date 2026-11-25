@@ -46,5 +46,19 @@ void main() {
   expect(json.nome == 'Metformina' && json.diasRestantes == 15, 'fromJson');
   expect(json.diasAlerta == MedicamentoModel.diasAlertaPadrao, 'alerta padrao');
 
+  final estourado = MedicamentoModel(
+    id: '3',
+    nome: 'Gliclazida',
+    dosagem: '30mg',
+    horario: '07:00',
+    quantidadePorDose: 3,
+    quantidadeTotal: 1,
+  );
+  expect(estourado.diasRestantes == 0, 'estoque menor que a dose = 0 dias');
+  expect(
+    normal.copyWith(quantidadeTotal: -5).quantidadeTotal == 0,
+    'copyWith nunca aceita estoque negativo',
+  );
+
   print('\nTodos os cenarios do teste passaram.');
 }

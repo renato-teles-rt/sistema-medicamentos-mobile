@@ -1,0 +1,52 @@
+server:
+  port: ${PORT:8080}
+  # 0.0.0.0 permite que o celular na mesma rede Wi-Fi alcance o backend.
+  # Escutar apenas em localhost causa "Connection refused" no dispositivo.
+  address: 0.0.0.0
+
+spring:
+  application:
+    name: cuidamed-backend
+
+  datasource:
+    url: jdbc:h2:file:./data/cuidamed;AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      # Banco de arquivo em desenvolvimento: o schema acompanha as entidades.
+      # Em producao use migrations (Flyway) e ddl-auto: validate.
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jackson:
+    default-property-inclusion: always
+    deserialization:
+      fail-on-unknown-properties: false
+
+cuidamed:
+  google:
+    # Client ID do tipo WEB do OAuth. Se ficar vazio, o backend aceita tokens
+    # sem validar a audiencia (modo DEV) e loga um aviso no startup.
+    client-id: ${GOOGLE_CLIENT_ID:}
+    token-info-url: https://oauth2.googleapis.com/tokeninfo
+  # Modo desenvolvimento: libera um login sem Google para testes de integracao.
+  dev:
+    habilitado: ${CUIDAMED_DEV:false}
+  vinculo:
+    # RN01: maximo de cuidadores ativos por paciente.
+    max-cuidadores-por-paciente: 2
+
+logging:
+  level:
+    br.com.cuidamed: INFO
